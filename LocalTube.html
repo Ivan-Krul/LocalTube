@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>LocalTube</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="./favicon.ico">
+</head>
+
+<style>
+    /*main*/
+    body {
+        background-color: #101010;
+        color: #ffffff
+    }
+
+    .text {
+        font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    }
+
+    /*logo*/
+    #logo_title {
+        background-color: red;
+        color: white;
+        margin-bottom: 0px;
+        margin-top: 0px;
+        padding-bottom: 10px;
+        padding-top: 10px;
+        text-align: center;
+        font-size: 2vw;
+    }
+
+    /*controllers*/
+    #controller {
+        text-align: center;
+    }
+
+    #controller * {
+        font-size: 1vw;
+    }
+
+    #numberCounterMaxRows {
+        width: 4vw;
+    }
+
+    /*video*/
+    #video_container {
+        text-align: center;
+    }
+
+    #video_player {
+        max-width: 80%;
+        max-height: 80%;
+        width: 80vw;
+        height: 80vh;
+        border: 5px solid black;
+
+        background-color: black;
+    }
+
+    .title_preview {
+        margin-bottom: 0px;
+        margin-top: 0px;
+        font-size: 0.9vw;
+    }
+
+    .video_title {
+        font-size: 2vw;
+        margin-top: 0px;
+        margin-bottom: 0px;
+    }
+
+    /*recommendation*/
+    #recommend_container {
+        text-align: center;
+    }
+
+    .preview {
+        width: 25vw;
+        height: 20vh;
+        max-width: 100%;
+        max-height: 80%;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .preview_container {
+        text-align: center;
+        width: 25vw;
+        height: 25vh;
+
+        max-width: 25%;
+        max-height: 25%;
+
+        border: 5px solid #161616;
+        background-color: #161616;
+    }
+
+    .preview_container:hover {
+        background-color: #303030;
+    }
+</style>
+
+<body>
+    <div id="logo_container">
+        <h1 class="text" id="logo_title">LocalTube</h1>
+    </div>
+    <div id="controller">
+        <button id="buttonShuffler">Shuffle</button>
+        <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
+        <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
+        <label for="searchFilter" class="text">Filter:</label>
+        <input type="search" id="searchFilter" disabled>
+        <label for="checkboxFilter" class="text">Enable Filter:</label>
+        <input type="checkbox" id="checkboxFilter">
+        <label class="text">Matched results:</label>
+        <label id="countFilterResults" class="text"></label>
+    </div>
+
+    <div id="video_container">
+        <video src="" controls id="video_player"></video>
+        </br>
+        <h1 for="video" class="text video_title" id="video_title"></h1>
+    </div>
+
+    <table id="recommend_container">
+
+    </table>
+
+    <script>
+        // main tools
+        function getRandomInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function readFromFileURL(fileURL) {
+            return new Promise((resolve, reject) => {
+                fetch(fileURL)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            const text = event.target.result;
+                            resolve(text);
+                        };
+                        reader.onerror = function (event) {
+                            console.error("Error reading file:", event.target.error);
+                            reject(event.target.error);
+                        };
+                        reader.readAsText(blob);
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        reject(error);
+                    });
+            });
+        }
+
+        function convertLinkToName(link = "") {
+            let split = link.split("\\");
+            const filename = split[split.length - 1];
+            const dots = filename.split(".");
+            let name = "";
+            for (let i = 0; i < dots.length - 1; i++) {
+                name += dots[i];
+            }
+            return name;
+        }
+
+        function setLinkToVideoContainer(link = "") {
+            console.log(link);
+
+            let videoContainer = document.getElementById("video_container");
+            let video = document.getElementById("video_player");
+            let label = document.getElementById("video_title");
+
+            video.src = link;
+
+            label.innerText = convertLinkToName(link);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+
+        // globals
+        var choosed = false;        
+        var videos = [];
+        var filteredVideos = [];
+        var videoIndex = 0;
+
+        // filter
+        function filterVideos() {
+            let matchString = document.getElementById("searchFilter").value;
+            if (document.getElementById("checkboxFilter").checked) {
+                filteredVideos = videos.filter(function (element) {
+                    return element.indexOf(matchString) !== -1;
+                });
+            }
+            else
+                filteredVideos = videos;
+
+            console.log(matchString + ": "+filteredVideos.length);
+            let matchedCounter = document.getElementById("countFilterResults");
+            matchedCounter.innerText = filteredVideos.length;
+        }
+
+        // generator
+        function generateSinglePreview() {
+            let previewContainer = document.createElement("th");
+
+            let video = document.createElement("video");
+            video.currentTime = getRandomInt(0, 5);
+
+            let videoIndexBuffer = getRandomInt(filteredVideos.length);
+            video.src = filteredVideos[videoIndexBuffer];
+            video.className = "preview";
+            let label = document.createElement("h4");
+            label.className = "text title_preview";
+            label.innerText = convertLinkToName(filteredVideos[videoIndexBuffer]);
+            previewContainer.className = "preview_container";
+
+            video.onclick = handlePreviewVideo;
+            label.onclick = handlePreviewLabel;
+
+            previewContainer.appendChild(video);
+            previewContainer.appendChild(label);
+            previewContainer.onclick = handlePreview;
+
+            return previewContainer;
+        }
+
+        function generateRecommends() {
+            const max_width = 4;
+
+            filterVideos();
+            let recommendContainer = document.getElementById("recommend_container");
+            let maxRows = document.getElementById("numberCounterMaxRows").value;
+
+            for (let y = 0; y < maxRows; y++) {
+                let previewRowContainer = document.createElement("tr");
+                for (let x = 0; x < max_width; x++) {
+                    recommendContainer.appendChild(generateSinglePreview());
+                }
+                recommendContainer.appendChild(previewRowContainer);
+            }
+        }
+
+        // handlers
+        function handleClickShuffle() {
+            videoIndex = getRandomInt(filteredVideos.length);
+            setLinkToVideoContainer(filteredVideos[videoIndex]);
+            let table = document.getElementById("recommend_container");
+
+            table.innerHTML = "";
+            generateRecommends();
+        }
+
+        function handlePreview(event) {
+            if (choosed) {
+                choosed = false;
+                return;
+            }
+            let target = event.target;
+            console.log(target);
+            let firstChild = target.firstChild;
+            if (firstChild === null)
+                return;
+            console.log(firstChild);
+            let attributes = firstChild.attributes;
+            let src = attributes[0];
+            setLinkToVideoContainer(src.value);
+            scrollToTop();
+        }
+
+        function handlePreviewVideo(event) {
+            let target = event.target;
+            console.log(target);
+            let attributes = target.attributes;
+            let src = attributes[0];
+            setLinkToVideoContainer(src.value);
+            scrollToTop();
+            choosed = true;
+        }
+
+        function handlePreviewLabel(event) {
+            let target = event.target;
+            let parent = target.parentElement;
+            let targetContainer = parent;
+            let firstChild = targetContainer.firstChild;
+            console.log(firstChild);
+            let attributes = firstChild.attributes;
+            let src = attributes[0];
+            setLinkToVideoContainer(src.value);
+            scrollToTop();
+            choosed = true;
+        }
+
+        function handleNumberChanges() {
+            let maxRows = document.getElementById("numberCounterMaxRows").value;
+
+            let recommendContainer = document.getElementById("recommend_container");
+            recommendContainer.innerHTML = "";
+            generateRecommends();
+        }
+
+        // event listener
+        document.getElementById("buttonShuffler").onclick = handleClickShuffle;
+        document.getElementById("numberCounterMaxRows").onclick = handleNumberChanges;
+        document.getElementById("checkboxFilter").addEventListener("change", () => {
+            document.getElementById("searchFilter").disabled = !document.getElementById("checkboxFilter").checked;
+            filterVideos();
+        })
+        document.getElementById("searchFilter").addEventListener("input", () => {
+            filterVideos();
+        })
+        document.getElementById("searchFilter").addEventListener("focusout", function () {
+            filterVideos();
+        });
+
+
+        // end
+        (async () => {
+            const videoList = await readFromFileURL("videos.txt");
+            videos = videoList.split("\n");
+            videoIndex = getRandomInt(videos.length)
+            setLinkToVideoContainer(videos[videoIndex]);
+            generateRecommends();
+            filterVideos();
+        })();
+    </script>
+</body>
+
+</html>

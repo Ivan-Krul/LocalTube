@@ -1,0 +1,10 @@
+.html
+.ps1
+.txt
+.m3u8
+.ico
+Compilated
+Films
+SDL Tutorials
+OBS
+FlashIntegro
