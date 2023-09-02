@@ -1,6 +1,6 @@
 # LocalTube
 HTML page for watching all your video content in your compute in local harddrive without any problems.
-It don't reading from other drive because it's prioritised for... well... web.
+It doesn't read from other drive because it's prioritised for... well... web.
 # Functionality
 It also has:
 - filter by title or path

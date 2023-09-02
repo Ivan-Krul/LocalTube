@@ -19,15 +19,28 @@
     }
 
     /*logo*/
-    #logo_title {
-        background-color: red;
+    #logo_container {
+        background-color: #ff4444;
         color: white;
+
         margin-bottom: 0px;
         margin-top: 0px;
         padding-bottom: 10px;
         padding-top: 10px;
-        text-align: center;
-        font-size: 2vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #logo_image {
+        width: 2.5vw;
+        height: 2.5vw;
+    }
+
+    #logo_title {
+        font-size: 2.5vw;
+        font-weight: bold;
+        padding-right: 1vw;
     }
 
     /*controllers*/
@@ -40,7 +53,16 @@
     }
 
     #numberCounterMaxRows {
-        width: 4vw;
+        max-width: 4vw;
+    }
+
+    #searchImage {
+        height: 1vw;
+        width: 1vw;
+    }
+
+    #searchFilter {
+        width: 64ch;
     }
 
     /*video*/
@@ -103,16 +125,18 @@
 
 <body>
     <div id="logo_container">
-        <h1 class="text" id="logo_title">LocalTube</h1>
+        <span class="text" id="logo_title">LocalTube</span>
+        <img src="./favicon.ico" alt="" id="logo_image">
     </div>
     <div id="controller">
         <button id="buttonShuffler">Shuffle</button>
         <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
         <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
         <label for="searchFilter" class="text">Filter:</label>
-        <input type="search" id="searchFilter" disabled>
-        <label for="checkboxFilter" class="text">Enable Filter:</label>
-        <input type="checkbox" id="checkboxFilter">
+        <input type="search" id="searchFilter" list="datalistSearchSuggestion" maxlength="128" required>
+        <datalist id="datalistSearchSuggestion">
+        </datalist>
+        <button id="buttonSearch"><img src="./search_image.png" id="searchImage"></button>
         <label class="text">Matched results:</label>
         <label id="countFilterResults" class="text"></label>
     </div>
@@ -187,7 +211,7 @@
         }
 
         // globals
-        var choosed = false;        
+        var choosed = false;
         var videos = [];
         var filteredVideos = [];
         var videoIndex = 0;
@@ -195,15 +219,11 @@
         // filter
         function filterVideos() {
             let matchString = document.getElementById("searchFilter").value;
-            if (document.getElementById("checkboxFilter").checked) {
-                filteredVideos = videos.filter(function (element) {
-                    return element.indexOf(matchString) !== -1;
-                });
-            }
-            else
-                filteredVideos = videos;
+            filteredVideos = videos.filter(function (element) {
+                return element.indexOf(matchString) !== -1;
+            });
 
-            console.log(matchString + ": "+filteredVideos.length);
+            console.log(matchString + ": " + filteredVideos.length);
             let matchedCounter = document.getElementById("countFilterResults");
             matchedCounter.innerText = filteredVideos.length;
         }
@@ -233,6 +253,37 @@
             return previewContainer;
         }
 
+        var recommendList = [];
+
+        function generateUniqueSingeRecommends() {
+            console.log("Unique");
+            let previewContainer = document.createElement("th");
+
+            let video = document.createElement("video");
+            video.currentTime = getRandomInt(0, 5);
+
+            if (recommendList.length !== 0) {
+                let videoIndexBuffer = getRandomInt(recommendList.length);
+                video.src = recommendList[videoIndexBuffer];
+                video.className = "preview";
+                let label = document.createElement("h4");
+                label.className = "text title_preview";
+                label.innerText = convertLinkToName(recommendList[videoIndexBuffer]);
+                previewContainer.className = "preview_container";
+
+                recommendList.splice(videoIndexBuffer, 1);
+
+                video.onclick = handlePreviewVideo;
+                label.onclick = handlePreviewLabel;
+
+                previewContainer.appendChild(video);
+                previewContainer.appendChild(label);
+                previewContainer.onclick = handlePreview;
+            }
+
+            return previewContainer;
+        }
+
         function generateRecommends() {
             const max_width = 4;
 
@@ -240,10 +291,24 @@
             let recommendContainer = document.getElementById("recommend_container");
             let maxRows = document.getElementById("numberCounterMaxRows").value;
 
-            for (let y = 0; y < maxRows; y++) {
+            let rec = filteredVideos.length / 4;
+            if (filteredVideos.length === 1)
+                rec = 0;
+            if (rec > maxRows){
+                rec = maxRows;
+                recommendList = [];
+            }
+            else
+                recommendList = filteredVideos;
+
+            
+            for (let y = 0; y < rec; y++) {
                 let previewRowContainer = document.createElement("tr");
                 for (let x = 0; x < max_width; x++) {
-                    recommendContainer.appendChild(generateSinglePreview());
+                    if (recommendList.length !== 0)
+                        recommendContainer.appendChild(generateUniqueSingeRecommends());
+                    else
+                        recommendContainer.appendChild(generateSinglePreview());
                 }
                 recommendContainer.appendChild(previewRowContainer);
             }
@@ -307,20 +372,36 @@
             generateRecommends();
         }
 
+        function handleOptionClick(event) {
+            console.log(event);
+            setLinkToVideoContainer(event.target.value);
+        }
+
         // event listener
         document.getElementById("buttonShuffler").onclick = handleClickShuffle;
         document.getElementById("numberCounterMaxRows").onclick = handleNumberChanges;
-        document.getElementById("checkboxFilter").addEventListener("change", () => {
-            document.getElementById("searchFilter").disabled = !document.getElementById("checkboxFilter").checked;
+        document.getElementById("buttonSearch").onclick = () => {
             filterVideos();
-        })
+            document.getElementById("recommend_container").innerHTML = "";
+            generateRecommends();
+        }
         document.getElementById("searchFilter").addEventListener("input", () => {
             filterVideos();
-        })
-        document.getElementById("searchFilter").addEventListener("focusout", function () {
-            filterVideos();
-        });
+            let datalistSearchSuggestion = document.getElementById("datalistSearchSuggestion");
+            datalistSearchSuggestion.innerHTML = "";
 
+            let len = filteredVideos.length;
+            if (filteredVideos.length > 6)
+                len = 6;
+
+            for (let i = 0; i < len; i++) {
+                let option = document.createElement("option");
+                option.value = convertLinkToName(filteredVideos[i]);
+                option.innerText = filteredVideos[i];
+
+                datalistSearchSuggestion.appendChild(option);
+            }
+        });
 
         // end
         (async () => {
