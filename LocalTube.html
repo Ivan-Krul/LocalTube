@@ -405,7 +405,7 @@
 
         // end
         (async () => {
-            const videoList = await readFromFileURL("videos.txt");
+            const videoList = await readFromFileURL("content.txt");
             videos = videoList.split("\n");
             videoIndex = getRandomInt(videos.length)
             setLinkToVideoContainer(videos[videoIndex]);

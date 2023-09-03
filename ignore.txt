@@ -1,0 +1,14 @@
+.html
+.ps1
+.txt
+.m3u8
+.ico
+.png
+.jpg
+Compilated
+Знімки камери
+Films
+SDL Tutorials
+OBS
+FlashIntegro
+Social Network

@@ -87,10 +87,10 @@ function Parse-Ignore
 
 $location = Get-Location
 $allFiles = Check-AdditionalDirectories $location.Path "pathToCheckItOut.txt"
-$files = Parse-Ignore "videoIgnore.txt" $allFiles
+$files = Parse-Ignore "ignore.txt" $allFiles
 
-New-Item "videos.txt" -Force
+New-Item "content.txt" -Force
 foreach($file in $files)
 {
-    $file >> "videos.txt"
+    $file >> "content.txt"
 }
