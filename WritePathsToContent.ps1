@@ -85,12 +85,33 @@ function Parse-Ignore
     return $filteredFiles
 }
 
+function Write-FileSize
+{
+    param(
+        [Int64]$Size
+    )
+
+    [Int64]$Bytes = $Size % 1KB
+    [Int64]$KBytes = ($Size / 1KB) % 1KB
+    [Int64]$MBytes = ($Size / 1MB) % 1KB
+    [Int64]$GBytes = ($Size / 1GB) % 1TB
+
+    Write-Host "Size of file(s): $($GBytes) GB $($MBytes) MB $($KBytes) KB $($Bytes) B"
+}
+
 $location = Get-Location
 $allFiles = Check-AdditionalDirectories $location.Path "pathToCheckItOut.txt"
 $files = Parse-Ignore "ignore.txt" $allFiles
 
 New-Item "content.txt" -Force
+
+$totalSize = 0
 foreach($file in $files)
 {
+    $prop = Get-Item $file
+    $totalSize += $prop.Length
     $file >> "content.txt"
 }
+
+Write-FileSize $totalSize
+Pause
