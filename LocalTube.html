@@ -44,11 +44,11 @@
     }
 
     /*controllers*/
-    #controller {
+    .controller {
         text-align: center;
     }
 
-    #controller * {
+    .controller * {
         font-size: 1vw;
     }
 
@@ -98,15 +98,15 @@
 
     .star {
         display: inline-block;
-		
+
         width: 3vh;
         height: 3vh;
 
         cursor: pointer;
         background-image: url('empty_star.svg');
-		background-size: cover;
+        background-size: cover;
     }
-	
+
     .star.active {
         background-image: url('filled_star.svg');
         /* Replace with your filled star image */
@@ -153,6 +153,8 @@
         background-color: #161616;
         border: 5px solid #161616;
     }
+
+    /*bottom controller*/
 </style>
 
 <body>
@@ -160,7 +162,7 @@
         <span class="text" id="logo_title">LocalTube</span>
         <img src="./favicon.svg" alt="" id="logo_image">
     </div>
-    <div id="controller">
+    <div id="controller" class="controller">
         <button id="buttonShuffler">Shuffle</button>
         <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
         <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
@@ -168,10 +170,9 @@
         <input type="search" id="searchFilter" list="datalistSearchSuggestion" maxlength="128" required>
         <datalist id="datalistSearchSuggestion">
         </datalist>
-        <button id="buttonSearch"><img src="./search_image.png" id="searchImage"></button>
+        <button id="buttonSearch"><img src="./search.svg" id="searchImage"></button>
         <label class="text">Matched results:</label>
         <label id="countFilterResults" class="text"></label>
-        <button id="downloadButton">Download user data</button>
         <button id="buttonUseProfile" onclick="scrollToBottom()">Use custom user data</button>
     </div>
 
@@ -192,9 +193,14 @@
 
     </table>
 
-    <div id="drop_container">
-        <div id="dropTarget" class="text">Drag & Drop user data here</div>
+    <div id="bottom_controller_container" class="controller">
+        <div id="drop_container">
+            <div id="dropTarget" class="text">Drag & Drop user data here</div>
+        </div>
+        <button id="buttonReserUserData">Reset user data</button>
+        <button id="downloadButton">Download user data</button>
     </div>
+
 </body>
 
 <script>
@@ -260,7 +266,6 @@
     var selectedVideo = "";
     var listedNamesOfVideos = [];
     var indexes = 0;
-    var userData = { video_rating: [] };
 
     // filter
     function filterVideos() {
@@ -278,10 +283,10 @@
     function setLinkToVideoContainer(link = "") {
         console.log(link);
         selectedVideo = link;
-        let data = userData.video_rating.find(item => item.video_src === link);
-        if(data) {
+        let data = JSON.parse(localStorage.getItem("userProfile")).video_rating.find(item => item.video_src === link);
+        if (data) {
             removeActiveStars();
-            markActiveStars(data.rating);
+            markActiveStars(data.rating, false);
         }
         else {
             removeActiveStars();
@@ -371,7 +376,7 @@
             recommendList = [];
         }
         else
-            recommendList = filteredVideos;              
+            recommendList = filteredVideos;
 
         for (let y = 0; y < rec; y++) {
             let previewRowContainer = document.createElement("tr");
@@ -384,6 +389,10 @@
             }
             recommendContainer.appendChild(previewRowContainer);
         }
+    }
+
+    function getProfile() {
+        return JSON.parse(localStorage.getItem("userProfile"));
     }
 
     // handlers
@@ -401,47 +410,22 @@
             isRecommendOptionHandled = false;
             return;
         }
-        //let target = event.target;
-        //console.log(target);
-        //let firstChild = target.firstChild;
-        //if (firstChild === null)
-        //    return;
-        //console.log(firstChild);
-        //let attributes = firstChild.attributes;
-        //let src = attributes[0];
         handlePreviewActually(event.target)
     }
 
-    function handlePreviewActually(target){
+    function handlePreviewActually(target) {
         setLinkToVideoContainer(listedNamesOfVideos[target.value]);
         scrollToTop();
     }
 
-    function handlePreviewVideo(event) {     
+    function handlePreviewVideo(event) {
         isRecommendOptionHandled = true;
         handlePreviewActually(event.target.parentNode)
-        //let target = event.target.parentElement;
-        //console.log(target);
-        //let attributes = target.attributes;
-        //let src = attributes[0];
-        //setLinkToVideoContainer(src.value);
-        //scrollToTop();
-        //choosed = true;
     }
 
     function handlePreviewLabel(event) {
         isRecommendOptionHandled = true;
         handlePreviewActually(event.target.parentNode)
-        //let target = event.target;
-        //let parent = target.parentElement;
-        //let targetContainer = parent;
-        //let firstChild = targetContainer.firstChild;
-        //console.log(firstChild);
-        //let attributes = firstChild.attributes;
-        //let src = attributes[0];
-        //setLinkToVideoContainer(src.value);
-        //scrollToTop();
-        //choosed = true;
     }
 
     function handleNumberChanges() {
@@ -463,24 +447,36 @@
         });
     }
 
-    function markActiveStars(rating) {
-        const arr = userData.video_rating.filter(rating => rating.video_src === selectedVideo);
+    function pushNewVideoRating(rating) {
+        let obj = JSON.parse(localStorage.getItem("userProfile"));
+        obj.video_rating.push(
+            {
+                video_src: selectedVideo,
+                rating: rating
+            }
+        );
+        localStorage.setItem("userProfile", JSON.stringify(obj));
+    }
+
+    function markActiveStars(rating, write = false) {
+        let obj = JSON.parse(localStorage.getItem("userProfile"));
+        const arr = obj.video_rating.filter(rating => rating.video_src === selectedVideo);
 
         if (arr.length === 0) {
-            userData.video_rating.push(
-                {
-                    video_src: selectedVideo,
-                    rating: rating
-                }
-            );
+            pushNewVideoRating(rating);
+            console.log(rating);
+            for (let i = 0; i < rating; i++) {
+                document.querySelectorAll('.star')[i].classList.add('active');
+            }
+            return
         }
         else {
             arr[0].rating = rating;
-        }
-
-        console.log(rating);
-        for (let i = 0; i < rating; i++) {
-            document.querySelectorAll('.star')[i].classList.add('active');
+            localStorage.setItem("userProfile", JSON.stringify(obj));
+            console.log(rating);
+            for (let i = 0; i < rating; i++) {
+                document.querySelectorAll('.star')[i].classList.add('active');
+            }
         }
     }
 
@@ -511,7 +507,7 @@
     });
     document.getElementById("downloadButton").addEventListener("click", () => {
         // Convert the JSON object to a JSON string
-        const jsonString = JSON.stringify(userData, null, 2); // The second argument (null) is for replacer function, and the third argument (2) is for pretty formatting (optional).
+        const jsonString = JSON.stringify(JSON.parse(localStorage.getItem("userProfile")), null, 2); // The second argument (null) is for replacer function, and the third argument (2) is for pretty formatting (optional).
 
         // Create a Blob containing the JSON data
         const blob = new Blob([jsonString], { type: "application/json" });
@@ -523,6 +519,10 @@
 
         // Trigger a click event on the download link to start the download
         downloadLink.click();
+    });
+    document.getElementById("buttonReserUserData").addEventListener('click', (event) => {
+        console.log("reseted");
+        localStorage.setItem("userProfile", JSON.stringify({ "video_rating": [] }));
     });
     dropTarget.addEventListener('dragover', (event) => {
         event.preventDefault(); // Prevent default behavior
@@ -545,7 +545,7 @@
                     const jsonData = JSON.parse(content);
 
                     // Handle the parsed JSON data here
-                    userData = jsonData;
+                    localStorage.setItem("userProfile", JSON.stringify(jsonData));
 
                     console.log("Loaded");
                 } catch (error) {
@@ -559,6 +559,9 @@
 
     // end
     (async () => {
+        if (localStorage.getItem("userProfile") === null)
+            localStorage.setItem("userProfile", JSON.stringify({ "video_rating": [] }));
+
         const videoList = await readFromFileURL("content.txt");
         videos = videoList.split("\n");
         videoIndex = getRandomInt(videos.length)
@@ -570,7 +573,7 @@
             star.addEventListener('click', (e) => {
                 const rating = e.target.getAttribute('data-rating');
                 removeActiveStars();
-                markActiveStars(rating);
+                markActiveStars(rating, true);
             });
         });
     })();
