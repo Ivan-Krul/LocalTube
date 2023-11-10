@@ -80,6 +80,10 @@
         background-color: black;
     }
 
+    #video_title {
+        font-size: 2vw;
+    }
+
     .title_preview {
         margin-bottom: 0px;
         margin-top: 0px;
@@ -87,7 +91,6 @@
     }
 
     .video_title {
-        font-size: 2vw;
         margin-top: 0px;
         margin-bottom: 0px;
     }
@@ -163,6 +166,8 @@
         <img src="./favicon.svg" alt="" id="logo_image">
     </div>
     <div id="controller" class="controller">
+        <button id="buttonBack">Back</button>
+        <button id="buttonNext">Next</button>
         <button id="buttonShuffler">Shuffle</button>
         <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
         <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
@@ -180,6 +185,7 @@
         <video src="" controls id="video_player"></video>
         </br>
         <h1 for="video" class="text video_title" id="video_title"></h1>
+        <h4 class="text video_title" >Watch counter: <div id="watch_counter"></div></h4>
         <div class="star-rating">
             <span class="star" data-rating="1"></span>
             <span class="star" data-rating="2"></span>
@@ -199,6 +205,11 @@
         </div>
         <button id="buttonReserUserData">Reset user data</button>
         <button id="downloadButton">Download user data</button>
+        <input type="checkbox" id="buttonToggleHistory">Toggle History</button>
+        <label for="history" id="historyCounter"></label>
+        <div id="history">
+
+        </div>
     </div>
 
 </body>
@@ -266,6 +277,8 @@
     var selectedVideo = "";
     var listedNamesOfVideos = [];
     var indexes = 0;
+    let history = [];
+    var historyIndex = -1;
 
     // filter
     function filterVideos() {
@@ -283,7 +296,7 @@
     function setLinkToVideoContainer(link = "") {
         console.log(link);
         selectedVideo = link;
-        let data = JSON.parse(localStorage.getItem("userProfile")).video_rating.find(item => item.video_src === link);
+        let data = JSON.parse(localStorage.getItem("userProfile")).video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
         if (data) {
             removeActiveStars();
             markActiveStars(data.rating, false);
@@ -297,6 +310,18 @@
         let label = document.getElementById("video_title");
 
         video.src = link;
+
+        if ((history.length === historyIndex + 1) && (history[historyIndex] !== link)) {
+            history.push(link);
+            historyIndex++;
+        }
+        else {
+            if(history[historyIndex] !== link) {
+                history.splice(historyIndex+1, history.length - historyIndex);
+                history.push(link);
+                historyIndex++;
+            }
+        }
 
         label.innerText = convertLinkToName(link);
     }
@@ -451,8 +476,9 @@
         let obj = JSON.parse(localStorage.getItem("userProfile"));
         obj.video_rating.push(
             {
-                video_src: selectedVideo,
-                rating: rating
+                video_src: convertLinkToName(selectedVideo),
+                rating: rating,
+                count: 1
             }
         );
         localStorage.setItem("userProfile", JSON.stringify(obj));
@@ -460,7 +486,7 @@
 
     function markActiveStars(rating, write = false) {
         let obj = JSON.parse(localStorage.getItem("userProfile"));
-        const arr = obj.video_rating.filter(rating => rating.video_src === selectedVideo);
+        const arr = obj.video_rating.filter(rating => rating.video_src === convertLinkToName(selectedVideo));
 
         if (arr.length === 0) {
             pushNewVideoRating(rating);
@@ -472,12 +498,28 @@
         }
         else {
             arr[0].rating = rating;
+            if(arr[0].count === undefined)
+                arr[0].count = 2;
             localStorage.setItem("userProfile", JSON.stringify(obj));
             console.log(rating);
             for (let i = 0; i < rating; i++) {
                 document.querySelectorAll('.star')[i].classList.add('active');
             }
+            
+
         }
+    }
+
+    function showHistoryInfo() {
+        const historyList = document.getElementById("history");
+        document.getElementById("historyCounter").innerText = "History: " + (historyIndex + 1);
+        historyList.innerHTML = "";
+
+        history.forEach(element => {
+            const newDiv = document.createElement("div");
+            newDiv.innerText = element;
+            historyList.appendChild(newDiv);
+        });
     }
 
     // event listener
@@ -556,11 +598,32 @@
             reader.readAsText(file);
         }
     });
+    document.getElementById("buttonBack").addEventListener('click', (event) => {
+        if (historyIndex >= 1) {
+            historyIndex --;
+            setLinkToVideoContainer(history[historyIndex]);
+        }
+    });
+
+    document.getElementById("buttonNext").addEventListener('click', (event) => {
+        if (historyIndex + 1 < history.length) {
+            historyIndex++;
+            setLinkToVideoContainer(history[historyIndex]);
+        }
+    });
+    document.getElementById("buttonToggleHistory").addEventListener('click', (event) => {
+        if(document.getElementById("buttonToggleHistory").checked)
+            showHistoryInfo();
+        else {
+            document.getElementById("historyCounter").innerHTML = "";
+            document.getElementById("history").innerHTML = "";
+        }
+    });
 
     // end
     (async () => {
         if (localStorage.getItem("userProfile") === null)
-            localStorage.setItem("userProfile", JSON.stringify({ "video_rating": [] }));
+            localStorage.setItem("userProfile", JSON.stringify({ "video_rating": [], "history": [] }));
 
         const videoList = await readFromFileURL("content.txt");
         videos = videoList.split("\n");

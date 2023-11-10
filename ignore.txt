@@ -1,14 +1,14 @@
-.html
-.ps1
-.txt
-.m3u8
-.ico
-.png
-.py
-Compilated
-Знімки камери
-Films
-SDL Tutorials
-OBS
-FlashIntegro
-Social Network
+.*\.html
+.*\.ps1
+.*\.txt
+.*\.m3u8
+.*\.ico
+.*\.png
+.*\.py
+.*\.svg
+.*\.mkv
+.*\.avi
+.*\.cbr
+.*\.jpg
+.*\.kmz
+.*#.*

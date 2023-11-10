@@ -43,6 +43,25 @@ function Check-AdditionalDirectories
     return $allFiles
 }
 
+function Test-StringAgainstRegexList {
+    param(
+        [string]$inputString,
+        [string[]]$regexList
+    )
+
+    $matchFound = $false
+
+    foreach ($regex in $regexList) {
+        if ($inputString -cmatch $regex) {
+            $matchFound = $true
+            Write-Host "Not mathced by `"$($regex)`": $($file)"
+            break
+        }
+    }
+
+    return -not $matchFound
+}
+
 function Parse-Ignore
 {
     param
@@ -57,28 +76,11 @@ function Parse-Ignore
 
     $filteredFiles = @()
 
-    $pattern = ""
-    $filter = {$_ -cmatch $pattern}
-
     foreach ($file in $allFiles)
     {
-        $notmathc = 0
-        foreach($ignoreEl in $ignorePatternList)
-        {
-            $pattern = $ignoreEl
-            if ($file | Where-Object $filter)
-            {
-                $notmathc = 1
-                break
-            }
-        }
-        if($notmathc -eq 0)
+        if(Test-StringAgainstRegexList -inputString $file -regexList $ignorePatternList)
         {
             $filteredFiles += $file
-        }
-        else
-        {
-            Write-Host "Not mathced: $($file)"
         }
     }
 
