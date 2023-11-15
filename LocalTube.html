@@ -20,7 +20,7 @@
 
     /*logo*/
     #logo_container {
-        background-color: #ff4444;
+        background-color: #ff6666;
         color: white;
 
         margin-bottom: 0px;
@@ -118,11 +118,12 @@
     /*recommendation*/
     #recommend_container {
         text-align: center;
+        width: 100%;
     }
 
     .preview {
-        width: 25vw;
-        height: 20vh;
+        width: 100vw;
+        height: 100vh;
         max-width: 100%;
         max-height: 80%;
         background-size: cover;
@@ -131,11 +132,11 @@
 
     .preview_container {
         text-align: center;
-        width: 25vw;
-        height: 25vh;
+        width: 100vw;
+        height: 40vh;
 
         max-width: 25%;
-        max-height: 25%;
+        max-height: 20%;
 
         border: 5px solid #161616;
         background-color: #161616;
@@ -169,8 +170,8 @@
         <button id="buttonBack">Back</button>
         <button id="buttonNext">Next</button>
         <button id="buttonShuffler">Shuffle</button>
-        <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
-        <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
+        <lable for="checkBoxDoMakeByOrder" class="text">Recomendations by order</lable>
+        <input type="checkbox" id="checkBoxDoMakeByOrder">
         <label for="searchFilter" class="text">Filter:</label>
         <input type="search" id="searchFilter" list="datalistSearchSuggestion" maxlength="128" required>
         <datalist id="datalistSearchSuggestion">
@@ -184,8 +185,8 @@
     <div id="video_container">
         <video src="" controls id="video_player"></video>
         </br>
-        <h1 for="video" class="text video_title" id="video_title"></h1>
-        <h4 class="text video_title" >Watch counter: <div id="watch_counter"></div></h4>
+        <h1 for="video_player" class="text video_title" id="video_title"></h1>
+        <h4 class="text video_title">Watch counter: <span id="watch_counter"></span></h4>
         <div class="star-rating">
             <span class="star" data-rating="1"></span>
             <span class="star" data-rating="2"></span>
@@ -205,6 +206,10 @@
         </div>
         <button id="buttonReserUserData">Reset user data</button>
         <button id="downloadButton">Download user data</button>
+        <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
+        <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
+        <label for="numberCounterColomns" class="text">Colomns:</label>
+        <input type="number" id="numberCounterColomns" value="4" min="1" max="8">
         <input type="checkbox" id="buttonToggleHistory">Toggle History</button>
         <label for="history" id="historyCounter"></label>
         <div id="history">
@@ -272,13 +277,11 @@
     var isRecommendOptionHandled = false;
     var videos = [];
     var filteredVideos = [];
-    var videoIndex = 0;
     var recommendList = [];
     var selectedVideo = "";
-    var listedNamesOfVideos = [];
-    var indexes = 0;
     let history = [];
     var historyIndex = -1;
+    var indexGeneration = 0;
 
     // filter
     function filterVideos() {
@@ -290,6 +293,36 @@
         console.log(matchString + ": " + filteredVideos.length);
         let matchedCounter = document.getElementById("countFilterResults");
         matchedCounter.innerText = filteredVideos.length;
+    }
+
+    function setWatchCounter(read) {
+        let obj = JSON.parse(localStorage.getItem("userProfile"));
+        var data = obj.video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
+        if (!read) {
+            if (data) {
+                if (data.count === undefined)
+                    data.count = 2;
+                else
+                    data.count++;
+            }
+            else {
+                pushNewVideoRating(0, false);
+                obj = JSON.parse(localStorage.getItem("userProfile"));
+                data = obj.video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
+                console.log(data);
+                data.count = 1;
+            }
+        }
+        if(!data && read) {
+            pushNewVideoRating(0, true);
+            obj = JSON.parse(localStorage.getItem("userProfile"));
+            data = obj.video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
+            console.log(data);
+        }
+
+        let video = document.getElementById("watch_counter").innerText = data.count;
+
+        localStorage.setItem("userProfile", JSON.stringify(obj));
     }
 
     // generator
@@ -305,6 +338,8 @@
             removeActiveStars();
         }
 
+        setWatchCounter(true);
+
         let videoContainer = document.getElementById("video_container");
         let video = document.getElementById("video_player");
         let label = document.getElementById("video_title");
@@ -316,8 +351,8 @@
             historyIndex++;
         }
         else {
-            if(history[historyIndex] !== link) {
-                history.splice(historyIndex+1, history.length - historyIndex);
+            if (history[historyIndex] !== link) {
+                history.splice(historyIndex + 1, history.length - historyIndex);
                 history.push(link);
                 historyIndex++;
             }
@@ -326,21 +361,17 @@
         label.innerText = convertLinkToName(link);
     }
 
-    function generateSinglePreview() {
+    function generatePreview(previewIndex) {
         let previewContainer = document.createElement("th");
 
         let video = document.createElement("video");
-        video.currentTime = getRandomInt(0, 5);
 
-        let videoIndexBuffer = getRandomInt(filteredVideos.length);
-        video.src = filteredVideos[videoIndexBuffer];
+        video.src = recommendList[previewIndex];
         video.className = "preview";
         let label = document.createElement("h4");
         label.className = "text title_preview";
-        label.innerText = convertLinkToName(filteredVideos[videoIndexBuffer]);
+        label.innerText = convertLinkToName(recommendList[previewIndex]);
         previewContainer.className = "preview_container";
-
-        listedNamesOfVideos.push(filteredVideos[videoIndexBuffer]);
 
         video.onclick = handlePreviewVideo;
         label.onclick = handlePreviewLabel;
@@ -348,69 +379,61 @@
         previewContainer.appendChild(video);
         previewContainer.appendChild(label);
         previewContainer.onclick = handlePreview;
-        previewContainer.value = indexes;
+        previewContainer.value = previewIndex;
 
         return previewContainer;
     }
 
-    function generateUniqueSingeRecommends() {
-        console.log("Unique");
-        let previewContainer = document.createElement("th");
+    function generateRecommendList(maxCount) {
+        filterVideos();
+        recommendList = [];
 
-        let video = document.createElement("video");
-        video.currentTime = getRandomInt(0, 5);
+        if (filteredVideos.length === 1)
+            return;
 
-        if (recommendList.length !== 0) {
-            video.src = recommendList[0];
-            video.className = "preview";
-            let label = document.createElement("h4");
-            label.className = "text title_preview";
-            label.innerText = convertLinkToName(recommendList[0]);
-            previewContainer.className = "preview_container";
-
-            listedNamesOfVideos.push(recommendList[0]);
-
-            recommendList.splice(0, 1);
-
-            video.onclick = handlePreviewVideo;
-            label.onclick = handlePreviewLabel;
-
-            previewContainer.appendChild(video);
-            previewContainer.appendChild(label);
-            previewContainer.onclick = handlePreview;
-            previewContainer.value = indexes;
+        if (getStatusAlphabeticalOrder()) {
+            if (maxCount > filteredVideos.length) {
+                recommendList = filteredVideos;
+                console.log("only");
+            }
+            else {
+                for (let i = 0; i < maxCount; i++)
+                    recommendList.push(filteredVideos[i]);
+                console.log("alphabetical order");
+            }
         }
-
-        return previewContainer;
+        else {
+            if (maxCount > filteredVideos.length) {
+                recommendList = filteredVideos;
+                console.log("only");
+            }
+            else {
+                for (let i = 0; i < maxCount; i++)
+                    recommendList.push(filteredVideos[getRandomInt(filteredVideos.length)]);
+                console.log("random");
+            }
+        }
     }
 
     function generateRecommends() {
-        indexes = 0;
-        listedNamesOfVideos = [];
-        const max_width = 4;
+        let previewIndex = 0;
+        const max_width = document.getElementById("numberCounterColomns").value;
 
-        filterVideos();
         let recommendContainer = document.getElementById("recommend_container");
         let maxRows = document.getElementById("numberCounterMaxRows").value;
 
-        let rec = filteredVideos.length / 4;
-        if (filteredVideos.length === 1)
+        generateRecommendList(max_width * maxRows);
+
+        let rec = recommendList.length / max_width;
+        if (recommendList.length === 1)
             rec = 0;
-        if (rec > maxRows) {
-            rec = maxRows;
-            recommendList = [];
-        }
-        else
-            recommendList = filteredVideos;
+        rec = Math.min(rec, maxRows);
 
         for (let y = 0; y < rec; y++) {
             let previewRowContainer = document.createElement("tr");
             for (let x = 0; x < max_width; x++) {
-                if (recommendList.length !== 0)
-                    recommendContainer.appendChild(generateUniqueSingeRecommends());
-                else
-                    recommendContainer.appendChild(generateSinglePreview());
-                indexes++;
+                recommendContainer.appendChild(generatePreview(previewIndex));
+                previewIndex++;
             }
             recommendContainer.appendChild(previewRowContainer);
         }
@@ -420,10 +443,13 @@
         return JSON.parse(localStorage.getItem("userProfile"));
     }
 
+    function getStatusAlphabeticalOrder() {
+        return document.getElementById("checkBoxDoMakeByOrder").checked
+    }
+
     // handlers
     function handleClickShuffle() {
-        videoIndex = getRandomInt(filteredVideos.length);
-        setLinkToVideoContainer(filteredVideos[videoIndex]);
+        setLinkToVideoContainer(filteredVideos[getRandomInt(filteredVideos.length)]);
         let table = document.getElementById("recommend_container");
 
         table.innerHTML = "";
@@ -439,13 +465,13 @@
     }
 
     function handlePreviewActually(target) {
-        setLinkToVideoContainer(listedNamesOfVideos[target.value]);
+        setLinkToVideoContainer(recommendList[target.value]);
         scrollToTop();
     }
 
     function handlePreviewVideo(event) {
         isRecommendOptionHandled = true;
-        handlePreviewActually(event.target.parentNode)
+        handlePreviewActually(event.target.parentNode);
     }
 
     function handlePreviewLabel(event) {
@@ -453,7 +479,15 @@
         handlePreviewActually(event.target.parentNode)
     }
 
-    function handleNumberChanges() {
+    function handleNumberColomnsChanges() {
+        let colomns = document.getElementById("numberCounterColomns").value;
+
+        let recommendContainer = document.getElementById("recommend_container");
+        recommendContainer.innerHTML = "";
+        generateRecommends();
+    }
+
+    function handleNumberRowsChanges() {
         let maxRows = document.getElementById("numberCounterMaxRows").value;
 
         let recommendContainer = document.getElementById("recommend_container");
@@ -472,13 +506,13 @@
         });
     }
 
-    function pushNewVideoRating(rating) {
+    function pushNewVideoRating(rating, zero) {
         let obj = JSON.parse(localStorage.getItem("userProfile"));
         obj.video_rating.push(
             {
                 video_src: convertLinkToName(selectedVideo),
                 rating: rating,
-                count: 1
+                count: (zero ? 0 : 1)
             }
         );
         localStorage.setItem("userProfile", JSON.stringify(obj));
@@ -489,7 +523,7 @@
         const arr = obj.video_rating.filter(rating => rating.video_src === convertLinkToName(selectedVideo));
 
         if (arr.length === 0) {
-            pushNewVideoRating(rating);
+            pushNewVideoRating(rating, false);
             console.log(rating);
             for (let i = 0; i < rating; i++) {
                 document.querySelectorAll('.star')[i].classList.add('active');
@@ -498,14 +532,14 @@
         }
         else {
             arr[0].rating = rating;
-            if(arr[0].count === undefined)
+            if (arr[0].count === undefined)
                 arr[0].count = 2;
             localStorage.setItem("userProfile", JSON.stringify(obj));
             console.log(rating);
             for (let i = 0; i < rating; i++) {
                 document.querySelectorAll('.star')[i].classList.add('active');
             }
-            
+
 
         }
     }
@@ -524,7 +558,8 @@
 
     // event listener
     document.getElementById("buttonShuffler").onclick = handleClickShuffle;
-    document.getElementById("numberCounterMaxRows").onclick = handleNumberChanges;
+    document.getElementById("numberCounterMaxRows").onclick = handleNumberRowsChanges;
+    document.getElementById("numberCounterColomns").onclick = handleNumberColomnsChanges;
     document.getElementById("buttonSearch").onclick = () => {
         filterVideos();
         document.getElementById("recommend_container").innerHTML = "";
@@ -600,7 +635,7 @@
     });
     document.getElementById("buttonBack").addEventListener('click', (event) => {
         if (historyIndex >= 1) {
-            historyIndex --;
+            historyIndex--;
             setLinkToVideoContainer(history[historyIndex]);
         }
     });
@@ -612,7 +647,7 @@
         }
     });
     document.getElementById("buttonToggleHistory").addEventListener('click', (event) => {
-        if(document.getElementById("buttonToggleHistory").checked)
+        if (document.getElementById("buttonToggleHistory").checked)
             showHistoryInfo();
         else {
             document.getElementById("historyCounter").innerHTML = "";
@@ -620,15 +655,24 @@
         }
     });
 
+    document.getElementById("video_player").addEventListener("play", (event) => {
+        console.log(event);
+        if(event.target.currentTime < 0.2) {
+            console.log("First play!");
+            setWatchCounter(false);
+        }
+    });
+
     // end
     (async () => {
+        orderByAlphabeticOrder = document.getElementById("checkBoxDoMakeByOrder").checked;
+
         if (localStorage.getItem("userProfile") === null)
             localStorage.setItem("userProfile", JSON.stringify({ "video_rating": [], "history": [] }));
 
         const videoList = await readFromFileURL("content.txt");
         videos = videoList.split("\n");
-        videoIndex = getRandomInt(videos.length)
-        setLinkToVideoContainer(videos[videoIndex]);
+        setLinkToVideoContainer(videos[getRandomInt(filteredVideos.length)]);
         generateRecommends();
         filterVideos();
 
