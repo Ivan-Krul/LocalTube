@@ -122,13 +122,20 @@
     }
 
     .preview {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        /* Preserve aspect ratio and fit within the container */
+    }
+
+    /*.preview {
         width: 100vw;
         height: 100vh;
         max-width: 100%;
         max-height: 80%;
         background-size: cover;
         background-position: center;
-    }
+    }*/
 
     .preview_container {
         text-align: center;
@@ -277,13 +284,29 @@
     var isRecommendOptionHandled = false;
     var videos = [];
     var filteredVideos = [];
+    var filteredMap = [];
     var recommendList = [];
+    var recommendMap = [];
     var selectedVideo = "";
     let history = [];
     var historyIndex = -1;
     var indexGeneration = 0;
 
     // filter
+    function newFilterVideos() {
+        let matchString = document.getElementById("searchFilter").value;
+
+        let buffer = videos.map((_, index) => index);
+
+        filteredMap = buffer.filter(function (element) {
+            return videos[element].indexOf(matchString) !== -1;
+        });
+
+        console.log(matchString + ": " + filteredMap.length);
+        let matchedCounter = document.getElementById("countFilterResults");
+        matchedCounter.innerText = filteredMap.length;
+    }
+
     function filterVideos() {
         let matchString = document.getElementById("searchFilter").value;
         filteredVideos = videos.filter(function (element) {
@@ -309,15 +332,13 @@
                 pushNewVideoRating(0, false);
                 obj = JSON.parse(localStorage.getItem("userProfile"));
                 data = obj.video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
-                console.log(data);
                 data.count = 1;
             }
         }
-        if(!data && read) {
+        if (!data && read) {
             pushNewVideoRating(0, true);
             obj = JSON.parse(localStorage.getItem("userProfile"));
             data = obj.video_rating.find(item => item.video_src === convertLinkToName(selectedVideo));
-            console.log(data);
         }
 
         let video = document.getElementById("watch_counter").innerText = data.count;
@@ -361,10 +382,33 @@
         label.innerText = convertLinkToName(link);
     }
 
+    function newGeneratePreview(previewIndex) {
+        let previewContainer = document.createElement("th");
+
+        let video = document.createElement("img");
+
+        video.src = "./previews/" + recommendMap[previewIndex] + ".jpg";
+        video.className = "preview";
+        let label = document.createElement("h4");
+        label.className = "text title_preview";
+        label.innerText = convertLinkToName(videos[recommendMap[previewIndex]]);
+        previewContainer.className = "preview_container";
+
+        video.onclick = handlePreviewVideo;
+        label.onclick = handlePreviewLabel;
+
+        previewContainer.appendChild(video);
+        previewContainer.appendChild(label);
+        previewContainer.onclick = handlePreview;
+        previewContainer.value = previewIndex;
+
+        return previewContainer;
+    }
+
     function generatePreview(previewIndex) {
         let previewContainer = document.createElement("th");
 
-        let video = document.createElement("video");
+        let video = document.createElement("img");
 
         video.src = recommendList[previewIndex];
         video.className = "preview";
@@ -382,6 +426,37 @@
         previewContainer.value = previewIndex;
 
         return previewContainer;
+    }
+
+    function newGenerateRecommendList(maxCount) {
+        newFilterVideos();
+        recommendMap = [];
+
+        if (filteredMap.length === 1)
+            return;
+
+        if (getStatusAlphabeticalOrder()) {
+            if (maxCount > filteredMap.length) {
+                recommendMap = filteredMap;
+                console.log("only");
+            } else {
+                for (let i = 0; i < maxCount; i++) {
+                    recommendMap.push(filteredMap[i]);
+                }
+                console.log("alphabetical order");
+            }
+        } else {
+            if (maxCount > filteredMap.length) {
+                recommendMap = filteredMap;
+                console.log("only");
+            } else {
+                for (let i = 0; i < maxCount; i++) {
+                    let randomIndex = getRandomInt(filteredMap.length);
+                    recommendMap.push(filteredMap[randomIndex]);
+                }
+                console.log("random");
+            }
+        }
     }
 
     function generateRecommendList(maxCount) {
@@ -422,17 +497,17 @@
         let recommendContainer = document.getElementById("recommend_container");
         let maxRows = document.getElementById("numberCounterMaxRows").value;
 
-        generateRecommendList(max_width * maxRows);
+        newGenerateRecommendList(max_width * maxRows);
 
-        let rec = recommendList.length / max_width;
-        if (recommendList.length === 1)
+        let rec = recommendMap.length / max_width;
+        if (recommendMap.length === 1)
             rec = 0;
         rec = Math.min(rec, maxRows);
 
         for (let y = 0; y < rec; y++) {
             let previewRowContainer = document.createElement("tr");
             for (let x = 0; x < max_width; x++) {
-                recommendContainer.appendChild(generatePreview(previewIndex));
+                recommendContainer.appendChild(newGeneratePreview(previewIndex));
                 previewIndex++;
             }
             recommendContainer.appendChild(previewRowContainer);
@@ -449,7 +524,7 @@
 
     // handlers
     function handleClickShuffle() {
-        setLinkToVideoContainer(filteredVideos[getRandomInt(filteredVideos.length)]);
+        setLinkToVideoContainer(videos[filteredMap[getRandomInt(filteredMap.length)]]);
         let table = document.getElementById("recommend_container");
 
         table.innerHTML = "";
@@ -461,7 +536,7 @@
             isRecommendOptionHandled = false;
             return;
         }
-        handlePreviewActually(event.target)
+        newHandlePreviewActually(event.target)
     }
 
     function handlePreviewActually(target) {
@@ -469,14 +544,19 @@
         scrollToTop();
     }
 
+    function newHandlePreviewActually(target) {
+        setLinkToVideoContainer(videos[recommendMap[target.value]]);
+        scrollToTop();
+    }
+
     function handlePreviewVideo(event) {
         isRecommendOptionHandled = true;
-        handlePreviewActually(event.target.parentNode);
+        newHandlePreviewActually(event.target.parentNode);
     }
 
     function handlePreviewLabel(event) {
         isRecommendOptionHandled = true;
-        handlePreviewActually(event.target.parentNode)
+        newHandlePreviewActually(event.target.parentNode)
     }
 
     function handleNumberColomnsChanges() {
@@ -561,23 +641,22 @@
     document.getElementById("numberCounterMaxRows").onclick = handleNumberRowsChanges;
     document.getElementById("numberCounterColomns").onclick = handleNumberColomnsChanges;
     document.getElementById("buttonSearch").onclick = () => {
-        filterVideos();
         document.getElementById("recommend_container").innerHTML = "";
         generateRecommends();
     }
     document.getElementById("searchFilter").addEventListener("input", () => {
-        filterVideos();
+        newFilterVideos();
         let datalistSearchSuggestion = document.getElementById("datalistSearchSuggestion");
         datalistSearchSuggestion.innerHTML = "";
 
-        let len = filteredVideos.length;
-        if (filteredVideos.length > document.getElementById("numberCounterMaxRows").value)
+        let len = filteredMap.length;
+        if (filteredMap.length > document.getElementById("numberCounterMaxRows").value)
             len = document.getElementById("numberCounterMaxRows").value;
 
         for (let i = 0; i < len; i++) {
             let option = document.createElement("option");
-            option.value = convertLinkToName(filteredVideos[i]);
-            option.innerText = filteredVideos[i];
+            option.value = convertLinkToName(filteredMap[i]);
+            option.innerText = filteredMap[i];
 
             datalistSearchSuggestion.appendChild(option);
         }
@@ -656,8 +735,7 @@
     });
 
     document.getElementById("video_player").addEventListener("play", (event) => {
-        console.log(event);
-        if(event.target.currentTime < 0.2) {
+        if (event.target.currentTime < 0.2) {
             console.log("First play!");
             setWatchCounter(false);
         }
@@ -672,9 +750,8 @@
 
         const videoList = await readFromFileURL("content.txt");
         videos = videoList.split("\n");
-        setLinkToVideoContainer(videos[getRandomInt(filteredVideos.length)]);
+        setLinkToVideoContainer(videos[getRandomInt(videos.length)]);
         generateRecommends();
-        filterVideos();
 
         document.querySelectorAll('.star').forEach((star) => {
             star.addEventListener('click', (e) => {
