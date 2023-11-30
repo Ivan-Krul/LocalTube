@@ -54,7 +54,7 @@ function Test-StringAgainstRegexList {
     foreach ($regex in $regexList) {
         if ($inputString -cmatch $regex) {
             $matchFound = $true
-            Write-Host "Not mathced by `"$($regex)`": $($file)"
+            Write-Host "`"$($regex)`": $($file)"
             break
         }
     }
