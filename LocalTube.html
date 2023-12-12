@@ -87,7 +87,7 @@
     .title_preview {
         margin-bottom: 0px;
         margin-top: 0px;
-        font-size: 0.9vw;
+        font-size: 10px;
     }
 
     .video_title {
@@ -140,7 +140,7 @@
     .preview_container {
         text-align: center;
         width: 100vw;
-        height: 40vh;
+        height: 10vw;
 
         max-width: 25%;
         max-height: 20%;
@@ -179,6 +179,8 @@
         <button id="buttonShuffler">Shuffle</button>
         <lable for="checkBoxDoMakeByOrder" class="text">Recomendations by order</lable>
         <input type="checkbox" id="checkBoxDoMakeByOrder">
+        <label for="checkboxDirectoryMode" class="text">Directory mode</label>
+        <input type="checkbox" id="checkboxDirectoryMode">
         <label for="searchFilter" class="text">Filter:</label>
         <input type="search" id="searchFilter" list="datalistSearchSuggestion" maxlength="128" required>
         <datalist id="datalistSearchSuggestion">
@@ -192,7 +194,7 @@
     <div id="video_container">
         <video src="" controls id="video_player"></video>
         </br>
-        <h1 for="video_player" class="text video_title" id="video_title"></h1>
+        <a target="_blank" for="video_player" class="text video_title" id="video_title" style="color:#ffffff"></a>
         <h4 class="text video_title">Watch counter: <span id="watch_counter"></span></h4>
         <div class="star-rating">
             <span class="star" data-rating="1"></span>
@@ -214,7 +216,7 @@
         <button id="buttonReserUserData">Reset user data</button>
         <button id="downloadButton">Download user data</button>
         <label for="numberCounterMaxRows" class="text">Max rows of recommendation:</label>
-        <input type="number" id="numberCounterMaxRows" value="10" min="0" max="99">
+        <input type="number" id="numberCounterMaxRows" value="10" min="0">
         <label for="numberCounterColomns" class="text">Colomns:</label>
         <input type="number" id="numberCounterColomns" value="4" min="1" max="8">
         <input type="checkbox" id="buttonToggleHistory">Toggle History</button>
@@ -225,7 +227,6 @@
     </div>
 
 </body>
-
 <script>
     // main tools
     function getRandomInt(max) {
@@ -283,14 +284,11 @@
     // globals
     var isRecommendOptionHandled = false;
     var videos = [];
-    var filteredVideos = [];
     var filteredMap = [];
-    var recommendList = [];
     var recommendMap = [];
     var selectedVideo = "";
     let history = [];
     var historyIndex = -1;
-    var indexGeneration = 0;
 
     // filter
     function newFilterVideos() {
@@ -305,17 +303,6 @@
         console.log(matchString + ": " + filteredMap.length);
         let matchedCounter = document.getElementById("countFilterResults");
         matchedCounter.innerText = filteredMap.length;
-    }
-
-    function filterVideos() {
-        let matchString = document.getElementById("searchFilter").value;
-        filteredVideos = videos.filter(function (element) {
-            return element.indexOf(matchString) !== -1;
-        });
-
-        console.log(matchString + ": " + filteredVideos.length);
-        let matchedCounter = document.getElementById("countFilterResults");
-        matchedCounter.innerText = filteredVideos.length;
     }
 
     function setWatchCounter(read) {
@@ -366,6 +353,7 @@
         let label = document.getElementById("video_title");
 
         video.src = link;
+        label.href = "https://www.youtube.com/results?search_query=" +  convertLinkToName(link).replaceAll("+", "%2B").replaceAll(" ", "+");
 
         if ((history.length === historyIndex + 1) && (history[historyIndex] !== link)) {
             history.push(link);
@@ -392,29 +380,6 @@
         let label = document.createElement("h4");
         label.className = "text title_preview";
         label.innerText = convertLinkToName(videos[recommendMap[previewIndex]]);
-        previewContainer.className = "preview_container";
-
-        video.onclick = handlePreviewVideo;
-        label.onclick = handlePreviewLabel;
-
-        previewContainer.appendChild(video);
-        previewContainer.appendChild(label);
-        previewContainer.onclick = handlePreview;
-        previewContainer.value = previewIndex;
-
-        return previewContainer;
-    }
-
-    function generatePreview(previewIndex) {
-        let previewContainer = document.createElement("th");
-
-        let video = document.createElement("img");
-
-        video.src = recommendList[previewIndex];
-        video.className = "preview";
-        let label = document.createElement("h4");
-        label.className = "text title_preview";
-        label.innerText = convertLinkToName(recommendList[previewIndex]);
         previewContainer.className = "preview_container";
 
         video.onclick = handlePreviewVideo;
@@ -459,35 +424,12 @@
         }
     }
 
-    function generateRecommendList(maxCount) {
-        filterVideos();
-        recommendList = [];
-
-        if (filteredVideos.length === 1)
-            return;
-
-        if (getStatusAlphabeticalOrder()) {
-            if (maxCount > filteredVideos.length) {
-                recommendList = filteredVideos;
-                console.log("only");
-            }
-            else {
-                for (let i = 0; i < maxCount; i++)
-                    recommendList.push(filteredVideos[i]);
-                console.log("alphabetical order");
-            }
+    class DirectoryMode {
+        constructor(startDir) {
+            this.currentDir = startDir;
         }
-        else {
-            if (maxCount > filteredVideos.length) {
-                recommendList = filteredVideos;
-                console.log("only");
-            }
-            else {
-                for (let i = 0; i < maxCount; i++)
-                    recommendList.push(filteredVideos[getRandomInt(filteredVideos.length)]);
-                console.log("random");
-            }
-        }
+
+        
     }
 
     function generateRecommends() {
@@ -537,11 +479,6 @@
             return;
         }
         newHandlePreviewActually(event.target)
-    }
-
-    function handlePreviewActually(target) {
-        setLinkToVideoContainer(recommendList[target.value]);
-        scrollToTop();
     }
 
     function newHandlePreviewActually(target) {
@@ -619,8 +556,6 @@
             for (let i = 0; i < rating; i++) {
                 document.querySelectorAll('.star')[i].classList.add('active');
             }
-
-
         }
     }
 
@@ -647,20 +582,35 @@
     document.getElementById("searchFilter").addEventListener("input", () => {
         newFilterVideos();
         let datalistSearchSuggestion = document.getElementById("datalistSearchSuggestion");
-        datalistSearchSuggestion.innerHTML = "";
 
+        datalistSearchSuggestion.innerHTML = "";
         let len = filteredMap.length;
         if (filteredMap.length > document.getElementById("numberCounterMaxRows").value)
             len = document.getElementById("numberCounterMaxRows").value;
 
         for (let i = 0; i < len; i++) {
             let option = document.createElement("option");
-            option.value = convertLinkToName(filteredMap[i]);
-            option.innerText = filteredMap[i];
+            option.value = convertLinkToName(videos[filteredMap[i]]);
+            option.innerText = videos[filteredMap[i]];
 
             datalistSearchSuggestion.appendChild(option);
         }
     });
+	async function downloadFromURL(url) {
+	    // Convert the JSON object to a JSON string
+        const jsonString = await readFromFileURL(url);
+
+        // Create a Blob containing the JSON data
+        const blob = new Blob([jsonString], { type: "text/plain" });
+
+        // Create a download link for the Blob
+        const downloadLink = document.createElement("a");
+        downloadLink.href = window.URL.createObjectURL(blob);
+        downloadLink.download = "user_data.txt"; // Specify the downloaded file name
+
+        // Trigger a click event on the download link to start the download
+        downloadLink.click();
+	}
     document.getElementById("downloadButton").addEventListener("click", () => {
         // Convert the JSON object to a JSON string
         const jsonString = JSON.stringify(JSON.parse(localStorage.getItem("userProfile")), null, 2); // The second argument (null) is for replacer function, and the third argument (2) is for pretty formatting (optional).
