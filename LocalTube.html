@@ -281,6 +281,28 @@
         });
     }
 
+    function countAllCopies() {
+        let list = [];
+        let isUniq = true;
+
+        videos.forEach(element => {
+            let name = convertLinkToName(element);
+            isUniq = true;
+            for(let i = 0; i < list.length; i++){
+                if(list[i].name === name) {
+                    isUniq = false;
+                    list[i].count++;
+                    break;
+                }
+            }
+            if(isUniq) {
+                list.push({name: name, count: 1 });
+            }
+        });
+
+        return list.filter(function(elem) {return elem.count !== 1});
+    }
+
     // globals
     var isRecommendOptionHandled = false;
     var videos = [];
